@@ -6,7 +6,7 @@ Subject : https://github.com/dtolnay/proc-macro-workshop
 
 - [ ] builder: 
   - [x] 01-parse
-  - [ ] 02-create-builder
+  - [x] 02-create-builder
   - [ ] 03-call-setters
   - [ ] 04-call-build
   - [ ] 05-method-chaining
