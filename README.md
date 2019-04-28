@@ -5,7 +5,7 @@ Subject : https://github.com/dtolnay/proc-macro-workshop
 ## Current status of resolution : 
 
 - [ ] builder: 
-  - [ ] 01-parse
+  - [x] 01-parse
   - [ ] 02-create-builder
   - [ ] 03-call-setters
   - [ ] 04-call-build
