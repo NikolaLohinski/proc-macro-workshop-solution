@@ -11,38 +11,24 @@ pub fn builder_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream
   let source_name = &item.ident; 
   let builder_name = syn::Ident::new(&format!("{}Builder", source_name), source_name.span());
   
+  let struct_impl = make_struct_impl(&item, &builder_name);
   let builder_struct = make_builder_struct(&item, &builder_name);
-  let struct_trait = make_struct_trait(&item, &builder_name);
-  let setters_trait = make_builder_setter(&item, &builder_name);
+  let builder_impl = make_builder_impl(&item, &builder_name);
 
   let gen = quote! {
-    #struct_trait
+    use std::error::Error;
+
+    #struct_impl
 
     #builder_struct
     
-    #setters_trait
+    #builder_impl
   };
 
   gen.into()
 }
 
-fn make_builder_struct(source: &syn::ItemStruct, builder_name: &syn::Ident) -> proc_macro2::TokenStream {
-  let mut field_tokens = Vec::new();
-  for field in &source.fields {
-    let name = &field.ident;
-    let type_ = &field.ty;
-    field_tokens.push(quote!{
-        #name: Option<#type_>,
-    });
-  }
-  quote! {
-    pub struct #builder_name {
-      #(#field_tokens)*
-    }
-  }
-}
-
-fn make_struct_trait(source: &syn::ItemStruct, builder_name: &syn::Ident) -> proc_macro2::TokenStream {
+fn make_struct_impl(source: &syn::ItemStruct, builder_name: &syn::Ident) -> proc_macro2::TokenStream {
   let mut empty_fields = Vec::new();
   for field in &source.fields {
     let name = &field.ident;
@@ -62,7 +48,24 @@ fn make_struct_trait(source: &syn::ItemStruct, builder_name: &syn::Ident) -> pro
   }
 }
 
-fn make_builder_setter(source: &syn::ItemStruct, builder_name: &syn::Ident) -> proc_macro2::TokenStream {
+fn make_builder_struct(source: &syn::ItemStruct, builder_name: &syn::Ident) -> proc_macro2::TokenStream {
+  let mut field_tokens = Vec::new();
+  for field in &source.fields {
+    let name = &field.ident;
+    let type_ = &field.ty;
+    field_tokens.push(quote!{
+        #name: Option<#type_>,
+    });
+  }
+  quote! {
+    #[derive(Clone)]
+    pub struct #builder_name {
+      #(#field_tokens)*
+    }
+  }
+}
+
+fn make_builder_impl(source: &syn::ItemStruct, builder_name: &syn::Ident) -> proc_macro2::TokenStream {
   let mut setters = Vec::new();
   for field in &source.fields {
     let name = &field.ident;
@@ -73,9 +76,37 @@ fn make_builder_setter(source: &syn::ItemStruct, builder_name: &syn::Ident) -> p
         }
     });
   }
+
+  let build_method = make_builder_build_method(source, builder_name);
+
   quote! {
     impl #builder_name {
       #(#setters)*
+      
+      #build_method
+    }
+  }
+}
+
+fn make_builder_build_method(source: &syn::ItemStruct, builder_name: &syn::Ident) -> proc_macro2::TokenStream {
+  let mut guard = Vec::new();
+  let mut output_values = Vec::new();
+  for field in &source.fields {
+    let name = &field.ident;
+    guard.push(quote!{
+        #name: Some(#name),
+    });
+    output_values.push(quote!{
+      #name: #name,
+    });
+  }
+  let source_name = &source.ident;
+  quote! {
+    pub fn build(mut self) -> Result<#source_name, Box<dyn Error>> {
+      match self {
+        #builder_name { #(#guard)* } => Ok(#source_name { #(#output_values)* }),
+        _ => Err(From::from(format!("missing some fields to build {}", stringify!(#source_name)))),
+      }
     }
   }
 }
