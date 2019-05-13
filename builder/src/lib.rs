@@ -71,8 +71,9 @@ fn make_builder_impl(source: &syn::ItemStruct, builder_name: &syn::Ident) -> pro
     let name = &field.ident;
     let type_ = &field.ty;
     setters.push(quote!{
-        fn #name(&mut self, #name: #type_) {
+        fn #name(mut self, #name: #type_) -> Self {
           self.#name = Some(#name);
+          self
         }
     });
   }

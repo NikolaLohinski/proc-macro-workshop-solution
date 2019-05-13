@@ -9,7 +9,7 @@ Subject : https://github.com/dtolnay/proc-macro-workshop
   - [x] 02-create-builder
   - [x] 03-call-setters
   - [x] 04-call-build
-  - [ ] 05-method-chaining
+  - [x] 05-method-chaining
   - [ ] 06-optional-field
   - [ ] 07-repeated-field
   - [ ] 08-unrecognized-attribute
