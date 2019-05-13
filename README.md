@@ -10,7 +10,7 @@ Subject : https://github.com/dtolnay/proc-macro-workshop
   - [x] 03-call-setters
   - [x] 04-call-build
   - [x] 05-method-chaining
-  - [ ] 06-optional-field
+  - [x] 06-optional-field
   - [ ] 07-repeated-field
   - [ ] 08-unrecognized-attribute
   - [ ] 09-redefined-prelude-types
