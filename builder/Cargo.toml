@@ -17,5 +17,5 @@ workshop-test-runner = { path = "../test-runner" }
 
 [dependencies]
 proc-macro2 = "0.4.30"
-syn = { version="0.14.4", features=["full"] }
+syn = { version="0.15.34", features=["full", "parsing"] }
 quote = "0.6.3"

@@ -11,7 +11,7 @@ Subject : https://github.com/dtolnay/proc-macro-workshop
   - [x] 04-call-build
   - [x] 05-method-chaining
   - [x] 06-optional-field
-  - [ ] 07-repeated-field
+  - [x] 07-repeated-field
   - [ ] 08-unrecognized-attribute
   - [ ] 09-redefined-prelude-types
 
