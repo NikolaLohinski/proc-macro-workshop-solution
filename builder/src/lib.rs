@@ -45,7 +45,7 @@ pub fn builder_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream
       #(#builder_setters)*
       
       // Method to resolve builder to source struct
-      fn build(mut self) -> Result<#source_name, Box<dyn Error>> {
+      fn build(mut self) -> Result<#source_name, Box<dyn std::Error>> {
         // Guard for missing fields
         #(#build_guards)*
 
@@ -77,7 +77,7 @@ pub fn builder_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 fn make_empty_field(field: &syn::Field) -> proc_macro2::TokenStream {
   let name = &field.ident;
   match get_field_type(field) {
-    Ok(FieldType::Repeated) => quote!{ #name: Vec::new(), },
+    Ok(FieldType::Repeated) => quote!{ #name: std::Vec::new(), },
     _ => quote!{ #name: None, },
   }
 }
@@ -86,7 +86,7 @@ fn make_builder_field(field: &syn::Field) -> proc_macro2::TokenStream {
   let name = &field.ident;
   let ty = &field.ty;
   match get_field_type(field) {
-    Ok(FieldType::Regular) => quote!{ #name: Option<#ty>, },
+    Ok(FieldType::Regular) => quote!{ #name: std::option::Option<#ty>, },
     _ => quote!{ #name: #ty, },
   }
 }
