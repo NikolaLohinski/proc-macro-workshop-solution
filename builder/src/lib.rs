@@ -3,7 +3,6 @@ extern crate proc_macro2;
 
 use syn;
 use quote::quote;
-use std::error::Error;
 
 enum MacroAttribute {
   Each,
@@ -78,7 +77,7 @@ pub fn builder_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 fn make_empty_field(field: &syn::Field) -> proc_macro2::TokenStream {
   let name = &field.ident;
   match get_field_type(field) {
-    FieldType::Repeated => quote!{ #name: Vec::new(), },
+    Ok(FieldType::Repeated) => quote!{ #name: Vec::new(), },
     _ => quote!{ #name: None, },
   }
 }
@@ -87,7 +86,7 @@ fn make_builder_field(field: &syn::Field) -> proc_macro2::TokenStream {
   let name = &field.ident;
   let ty = &field.ty;
   match get_field_type(field) {
-    FieldType::Regular => quote!{ #name: Option<#ty>, },
+    Ok(FieldType::Regular) => quote!{ #name: Option<#ty>, },
     _ => quote!{ #name: #ty, },
   }
 }
@@ -96,9 +95,9 @@ fn make_setter(field: &syn::Field) -> proc_macro2::TokenStream {
   let name = &field.ident;
   let ty = &field.ty;
   match get_field_type(field) {
-    FieldType::Repeated => {
+    Ok(FieldType::Repeated) => {
       let nested_type = guess_nested_type(ty);
-      let (_, repeated_setter) = get_macro_attribute(field).unwrap();
+      let (_, repeated_setter) = get_macro_attribute(field).unwrap().unwrap();
       let repeated_setter_name = syn::Ident::new(&repeated_setter, proc_macro2::Span::call_site());
       quote!{
           fn #repeated_setter_name(mut self, #name: #nested_type) -> Self {
@@ -107,7 +106,7 @@ fn make_setter(field: &syn::Field) -> proc_macro2::TokenStream {
           }
       }
     },
-    FieldType::Optional => {
+    Ok(FieldType::Optional) => {
       let nested_type = guess_nested_type(ty);
       quote!{
           fn #name(mut self, #name: #nested_type) -> Self {
@@ -116,19 +115,20 @@ fn make_setter(field: &syn::Field) -> proc_macro2::TokenStream {
           }
       }
     },
-    FieldType::Regular => quote!{
+    Ok(FieldType::Regular) => quote!{
         fn #name(mut self, #name: #ty) -> Self {
           self.#name = Some(#name);
           self
         }
     },
+    Err(e) => e.to_compile_error(),
   }
 }
 
 fn make_build_guard(field: &syn::Field) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
   let name = &field.ident;
   let guard = match get_field_type(field) {
-    FieldType::Regular => quote!{          
+    Ok(FieldType::Regular) => quote!{          
       let #name = match self.#name {
         Some(value) => value,
         None => return Err(From::from(format!("missing {} to build", stringify!(#name)))),
@@ -139,18 +139,19 @@ fn make_build_guard(field: &syn::Field) -> (proc_macro2::TokenStream, proc_macro
   (guard, quote!{ #name: #name, })
 }
 
-fn get_field_type(field: &syn::Field) -> FieldType {
+fn get_field_type(field: &syn::Field) -> Result<FieldType, syn::Error> {
   match get_macro_attribute(field) {
-    Some((MacroAttribute::Each, _)) => FieldType::Repeated,
-    None => match guess_nested_type(&field.ty) {
-      Some(_) if get_type_name(&field.ty).expect("type should be nested") == "Option" => FieldType::Optional,
-      _ => FieldType::Regular,
+    Ok(Some((MacroAttribute::Each, _))) => Ok(FieldType::Repeated),
+    Ok(None) => match guess_nested_type(&field.ty) {
+      Some(_) if get_type_name(&field.ty).expect("type should be nested") == "Option" => Ok(FieldType::Optional),
+      _ => Ok(FieldType::Regular),
     },
+    Err(e) => Err(e), 
   }
 }
 
-fn get_macro_attribute(field: &syn::Field) -> Option<(MacroAttribute, String)> {
- for attr in field.attrs.iter() {
+fn get_macro_attribute(field: &syn::Field) -> Result<Option<(MacroAttribute, String)>, syn::Error> {
+  for attr in field.attrs.iter() {
     if !attr.path.is_ident("builder") {
       continue
     }
@@ -169,21 +170,21 @@ fn get_macro_attribute(field: &syn::Field) -> Option<(MacroAttribute, String)> {
     };
 
     return match parse_attr_arg(&builder_attr_param) {
-      Ok((attr, value)) => Some((attr, value)),
-      Err(_) => continue,
+      Ok((attr, value)) => Ok(Some((attr, value))),
+      Err(e) => Err(e),
     }
   }
- None
+  Ok(None)
 }
 
-fn parse_attr_arg(meta: &syn::Meta) -> Result<(MacroAttribute, String), Box<dyn Error>> {
+fn parse_attr_arg(meta: &syn::Meta) -> Result<(MacroAttribute, String), syn::Error> {
   let (name, value) = match meta {
     syn::Meta::NameValue(syn::MetaNameValue{ ref ident, lit: syn::Lit::Str(lit_str), .. }) => (ident.to_string(), lit_str.value()),
-    _ => return Err(From::from("not a name value attribute argument")),
+    _ => return Err(syn::Error::new(proc_macro2::Span::call_site(), "badly formatted macro attribute"))
   };
   match name.as_ref() {
     "each" => Ok((MacroAttribute::Each, value)),
-    _ => Err(From::from(format!("unknown attribute argument {}", name)))
+    _ => Err(syn::Error::new(proc_macro2::Span::call_site(), format!("unknown attribute argument \"{}\"", name)))
   }
 }
 

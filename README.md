@@ -12,7 +12,7 @@ Subject : https://github.com/dtolnay/proc-macro-workshop
   - [x] 05-method-chaining
   - [x] 06-optional-field
   - [x] 07-repeated-field
-  - [ ] 08-unrecognized-attribute
+  - [x] 08-unrecognized-attribute
   - [ ] 09-redefined-prelude-types
 
 - [ ] debug: 
